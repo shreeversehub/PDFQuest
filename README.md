@@ -108,16 +108,7 @@ The system is designed to provide a more personalized learning experience based 
 
 ## 📂 Project Structure
 
-- `gamified-pdf-learning-system/`
-  - `backend/`
-    - `app.py`
-    - `pdf_processor/`
-    - `ai_engine/`
-    - `quiz_generator/`
-  - `frontend/`
-    - `src/`
-      - `components/`
-      - `pages/`
-  - `database/`
-  - `requirements.txt`
+- `PDFQuest/`
+  - `index.html` — complete app (PDF upload, extraction, summary, quiz, gamification)
+  - `Output.jpeg` — screenshot/demo preview
   - `README.md`

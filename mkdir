@@ -1,7 +1,0 @@
-mkdir -p gamified-pdf-learning-system/backend/pdf_processor
-mkdir -p gamified-pdf-learning-system/backend/ai_engine
-mkdir -p gamified-pdf-learning-system/backend/quiz_generator
-mkdir -p gamified-pdf-learning-system/frontend/src/components
-mkdir -p gamified-pdf-learning-system/frontend/src/pages
-mkdir -p gamified-pdf-learning-system/database
-cd gamified-pdf-learning-system

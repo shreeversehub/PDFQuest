@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gamified PDF Learning System</title>
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial;
+            background: #10052b;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ffff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .card {
+            background: #1d1040;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+        }
+
+        button {
+            background: #ff00aa;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 8px;
+        }
+
+        button:hover {
+            background: #00ccff;
+        }
+
+        #pdfText {
+            max-height: 250px;
+            overflow: auto;
+            padding: 15px;
+            background: #09051c;
+            border-radius: 10px;
+        }
+
+        .option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #30205a;
+        }
+
+        .correct {
+            background: green !important;
+        }
+
+        .wrong {
+            background: red !important;
+        }
+
+        .progress {
+            height: 20px;
+            background: #333;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        #xpBar {
+            height: 100%;
+            width: 0%;
+            background: #00ff88;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🎮 Gamified PDF Learning System</h1>
+
+    <!-- Score -->
+    <div class="card">
+        <h2>🏆 Learning Progress</h2>
+
+        <p>Score: <b id="score">0</b></p>
+        <p>Level: <b id="level">1</b></p>
+        <p>Questions: <b id="questions">0</b></p>
+        <p>Accuracy: <b id="accuracy">0%</b></p>
+
+        <div class="progress">
+            <div id="xpBar"></div>
+        </div>
+
+        <p>
+            XP: <span id="xp">0</span> / 100
+        </p>
+    </div>
+
+    <!-- PDF Upload -->
+    <div class="card">
+        <h2>📄 Upload PDF</h2>
+
+        <input type="file" id="pdfFile" accept=".pdf">
+
+        <button onclick="processPDF()">
+            Upload & Process
+        </button>
+
+        <p id="status"></p>
+    </div>
+
+    <!-- Extracted Content -->
+    <div class="card hidden" id="contentSection">
+
+        <h2>📖 Extracted Content</h2>
+
+        <div id="pdfText"></div>
+
+    </div>
+
+    <!-- Summary -->
+    <div class="card hidden" id="summarySection">
+
+        <h2>🧠 AI Summary</h2>
+
+        <p id="summary"></p>
+
+    </div>
+
+    <!-- Quiz -->
+    <div class="card hidden" id="quizSection">
+
+        <h2>❓ Interactive Quiz</h2>
+
+        <h3 id="question"></h3>
+
+        <div id="options"></div>
+
+        <button onclick="nextQuestion()">
+            Next Question
+        </button>
+
+    </div>
+
+    <!-- Achievements -->
+    <div class="card">
+
+        <h2>🏅 Achievements</h2>
+
+        <p id="achievement">
+            Complete activities to unlock achievements!
+        </p>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let text = "";
+
+let score = 0;
+let xp = 0;
+let level = 1;
+
+let questionsAnswered = 0;
+let correctAnswers = 0;
+
+let currentQuestion = 0;
+
+
+/* ---------------- PDF PROCESSING ---------------- */
+
+async function processPDF() {
+
+    let file = document.getElementById("pdfFile").files[0];
+
+    if (!file) {
+        alert("Please select a PDF");
+        return;
+    }
+
+    document.getElementById("status").innerText =
+        "Processing PDF...";
+
+    let reader = new FileReader();
+
+    reader.onload = async function () {
+
+        let typedArray = new Uint8Array(reader.result);
+
+        let pdf = await pdfjsLib.getDocument(typedArray).promise;
+
+        text = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+
+            let page = await pdf.getPage(i);
+
+            let content = await page.getTextContent();
+
+            let pageText =
+                content.items.map(item => item.str).join(" ");
+
+            text += pageText + " ";
+        }
+
+        document.getElementById("status").innerText =
+            "PDF processed successfully!";
+
+        document.getElementById("contentSection")
+            .classList.remove("hidden");
+
+        document.getElementById("pdfText")
+            .innerText = text;
+
+        generateSummary();
+
+        generateQuiz();
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+
+/* ---------------- SUMMARY ---------------- */
+
+function generateSummary() {
+
+    let sentences = text
+        .split(".")
+        .filter(s => s.trim().length > 30);
+
+    let summary = sentences
+        .slice(0, 5)
+        .join(". ");
+
+    if (summary.length === 0) {
+        summary = "No readable text found in the PDF.";
+    }
+
+    document.getElementById("summary")
+        .innerText = summary;
+
+    document.getElementById("summarySection")
+        .classList.remove("hidden");
+}
+
+
+/* ---------------- QUIZ ---------------- */
+
+let quiz = [];
+
+
+function generateQuiz() {
+
+    let sentences = text
+        .split(".")
+        .filter(s => s.trim().length > 40);
+
+    quiz = [];
+
+    for (let i = 0; i < Math.min(5, sentences.length); i++) {
+
+        let sentence = sentences[i].trim();
+
+        let words = sentence.split(" ");
+
+        if (words.length < 5)
+            continue;
+
+        let answerIndex =
+            Math.floor(words.length / 2);
+
+        let answer = words[answerIndex];
+
+        words[answerIndex] = "_____";
+
+        let question =
+            "Complete the sentence: " +
+            words.join(" ");
+
+        quiz.push({
+
+            question: question,
+
+            answer: answer,
+
+            options: [
+                answer,
+                "Computer",
+                "Learning",
+                "Database"
+            ]
+        });
+    }
+
+    if (quiz.length > 0) {
+
+        document.getElementById("quizSection")
+            .classList.remove("hidden");
+
+        showQuestion();
+    }
+}
+
+
+/* ---------------- SHOW QUESTION ---------------- */
+
+function showQuestion() {
+
+    if (currentQuestion >= quiz.length) {
+
+        document.getElementById("question")
+            .innerText = "🎉 Quiz Completed!";
+
+        document.getElementById("options")
+            .innerHTML = "";
+
+        return;
+    }
+
+    let q = quiz[currentQuestion];
+
+    document.getElementById("question")
+        .innerText = q.question;
+
+    let options = document.getElementById("options");
+
+    options.innerHTML = "";
+
+    q.options.forEach(option => {
+
+        let button =
+            document.createElement("button");
+
+        button.className = "option";
+
+        button.innerText = option;
+
+        button.onclick = function () {
+
+            checkAnswer(option, button);
+        };
+
+        options.appendChild(button);
+    });
+}
+
+
+/* ---------------- CHECK ANSWER ---------------- */
+
+function checkAnswer(answer, button) {
+
+    let correct =
+        quiz[currentQuestion].answer;
+
+    questionsAnswered++;
+
+    if (answer === correct) {
+
+        button.classList.add("correct");
+
+        correctAnswers++;
+
+        score += 10;
+
+        xp += 20;
+
+        alert("✅ Correct! +10 points");
+
+    } else {
+
+        button.classList.add("wrong");
+
+        alert(
+            "❌ Wrong answer!\nCorrect answer: "
+            + correct
+        );
+    }
+
+    updateProgress();
+}
+
+
+/* ---------------- NEXT QUESTION ---------------- */
+
+function nextQuestion() {
+
+    currentQuestion++;
+
+    showQuestion();
+}
+
+
+/* ---------------- PROGRESS ---------------- */
+
+function updateProgress() {
+
+    if (xp >= 100) {
+
+        level++;
+
+        xp = xp - 100;
+
+        alert(
+            "🎉 Level Up! You reached Level "
+            + level
+        );
+    }
+
+    document.getElementById("score")
+        .innerText = score;
+
+    document.getElementById("xp")
+        .innerText = xp;
+
+    document.getElementById("level")
+        .innerText = level;
+
+    document.getElementById("questions")
+        .innerText = questionsAnswered;
+
+    let accuracy = 0;
+
+    if (questionsAnswered > 0) {
+
+        accuracy =
+            Math.round(
+                (correctAnswers /
+                questionsAnswered) * 100
+            );
+    }
+
+    document.getElementById("accuracy")
+        .innerText = accuracy + "%";
+
+    document.getElementById("xpBar")
+        .style.width = xp + "%";
+
+    updateAchievement();
+}
+
+
+/* ---------------- ACHIEVEMENTS ---------------- */
+
+function updateAchievement() {
+
+    let message =
+        "Complete activities to unlock achievements!";
+
+    if (questionsAnswered >= 1) {
+
+        message = "🎯 First Question Completed!";
+    }
+
+    if (correctAnswers >= 3) {
+
+        message = "🔥 Quiz Master!";
+    }
+
+    if (level >= 2) {
+
+        message = "🏆 Level 2 Unlocked!";
+    }
+
+    document.getElementById("achievement")
+        .innerText = message;
+}
+
+</script>
+
+</body>
+</html>
